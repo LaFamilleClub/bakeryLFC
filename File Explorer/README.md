@@ -14,3 +14,5 @@ How to install and call the File Explorer module.
 User interaction with the module.
 Document changes.
 
+Changes:
+Ren'Py expects rpy files, not py, so renamed file_explorer.py to file_explorer.rpy. BTW, VS Code has a plug-in for Ren'Py.

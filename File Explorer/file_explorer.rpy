@@ -178,7 +178,8 @@ init python:
 
                         # get the full path of the item, filter
                         item_path = os.path.join(self.current_dir, item)
-                        if self.should_ignore_item(item):
+                        # Don't ignore directories; file might be in subdirectory
+                        if self.should_ignore_item(item) and os.path.isfile(item_path):
                             continue
 
                         # check if the item is a folder or a file
@@ -250,19 +251,50 @@ init python:
 
         # the actual action that happens when a file is chosen
         def choose_file(self, filename):
+            global full_path
             base_filename = os.path.basename(filename) # just the file name
             full_path = os.path.join(self.current_dir, filename) # the full file path
+            # return full_path
 
 
     # create an instance of the file explorer
     file_explorer = FileExplorer()
+
+init python:
+    # Example file handler for chosen file; check and hand-off
+    def FileActionHandler(chosen_file):
+        if(chosen_file != None):
+            CopyMCAvatar(chosen_file, dest_file)
+        else:
+            renpy.call_screen("ModalWarning", "Filename cannot be None")
+
+    # Copy avatar to destination
+    # dest_file is global defined in script.rpy
+    def CopyMCAvatar(src_file, dest_file):
+        shutil.copyfile(src_file, dest_file)
+
+# Display screen to show size, warning to quit and restart game
+screen ModalWarning(warningMsg):
+    modal True
+    zorder 101
+
+    frame:
+        xalign 0.5
+        yalign 0.5
+        xsize 500
+        vbox:
+            xalign 0.5
+            text warningMsg
+            text ""
+            textbutton "Close":
+                xalign 0.5
+                action Hide()
 
 
 ## -----------------------------------------------------
 ## Ren'Py Screen for a (Very Simple) File Explorer
 ## -----------------------------------------------------
 screen file_explorer_screen():
-
     # screen properties
     modal True
     zorder 100
@@ -270,6 +302,8 @@ screen file_explorer_screen():
     # temporary variables to track explorer state
     default directory_input = file_explorer.current_dir
     default directory_is_editable = False 
+
+    on "show" action Show("ModalWarning", warningMsg="Image size needs to be 200 x 324\nYou need to quit the game and restart for avatar to work correctly")
 
     # the explorer screen itself
     frame:
@@ -456,7 +490,9 @@ screen file_explorer_screen():
                                     ysize 150
                                     background FILE_EXPLORER_CONFIG["colors"]["file_background"]
                                     action Function(file_explorer.select_file, file)
-                                    text FILE_EXPLORER_CONFIG["icons"]["file"] + " " + file:
+                                    # Work-around for text interpolation
+                                    $ nfile = "[file!s]"
+                                    text FILE_EXPLORER_CONFIG["icons"]["file"] + " " + nfile:
                                         size file_font_size 
                                         color FILE_EXPLORER_CONFIG["colors"]["text_color"]
                                         xalign 0.5 
@@ -483,7 +519,9 @@ screen file_explorer_screen():
 
                     # right: "Choose File" button
                     textbutton FILE_EXPLORER_CONFIG["language"]["choose_file"]:
-                        action Function(file_explorer.choose_file, file_explorer.selected_file)
+                        action If(file_explorer.selected_file != None, (Function(file_explorer.choose_file, file_explorer.selected_file),Function(FileActionHandler, file_explorer.selected_file),Hide("file_explorer_screen")))
+                        #action If(file_explorer.selected_file != None, Function(file_explorer.choose_file, file_explorer.selected_file))
+                        #action Function(file_explorer.choose_file, file_explorer.selected_file)
                         text_size 20  # Corrected from 'size' to 'text_size'
                         background FILE_EXPLORER_CONFIG["colors"]["frame_background"]
                         hover_background FILE_EXPLORER_CONFIG["colors"]["button_hover"]
